@@ -1,0 +1,37 @@
+# --- OS / editor cruft ---
+.DS_Store
+**/.DS_Store
+~$*
+*.swp
+.idea/
+.vscode/
+
+# IMPORTANT: this scaffold SHIPS the .claude/ folder — it is the payload.
+# Do NOT add `.claude/` to this file. (Most real projects gitignore .claude;
+# this repo is the exception because distributing it is the whole point.)
+
+# --- Below: patterns you will likely want in the TARGET project,
+#     not in this scaffold. Uncomment per project as needed. ---
+#
+# # Nextflow
+# .nextflow/
+# .nextflow.log*
+# work/
+# trace.txt
+# report.html
+#
+# # Python
+# __pycache__/
+# *.pyc
+# .venv/
+#
+# # R
+# .Rhistory
+# renv/library/
+#
+# # Large / regenerable scientific artifacts (keep small text summaries)
+# **/output/**
+# !**/output/**/
+# !**/output/**/README.md
+# !**/output/**/REPORT.md
+# !**/output/**/*.md
