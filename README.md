@@ -73,7 +73,7 @@ Then open the project in Claude and run the skills below.
 
 1. **`prime`** — orient: reads `CLAUDE.md`, the index README, and minimal git state.
 2. **`create-rules`** — generate `CLAUDE.md`. It classifies the repo (five axes) and captures the
-   data-schema contracts. Review the schemas it writes — those are load-bearing.
+   data-schema contracts. Review the schemas it writes.
 3. **`create-readme top-level`** — write the index README that lists your subprojects.
 4. Per subproject: **`create-readme <dir>`** — write its stage README, and auto-anchor it as a list
    item in the index.
