@@ -31,7 +31,9 @@ under "Workflow order", and every subproject README links back up (`Related → 
   README is the authoritative index; resolve every `Upstream:`/`Downstream:` link against a file
   that exists (verify with a read/glob) before writing it.
 - **Match the house voice:** terse, mechanistic, present-tense. No emojis, no sales language.
-- **One README per invocation.** Don't fan out to siblings unless asked.
+- **One README per invocation.** Don't fan out to siblings unless asked. When the user *does* ask for
+  several at once, see "Bulk pass" below — that is the sanctioned exception, not a licence to widen
+  scope on your own.
 
 ---
 
@@ -147,7 +149,7 @@ stage has substantive content — but never omit a header). If a section is empt
 **Common tasks here:** <2–4 things a returning author/Claude will do — "add a params variant",
 "debug a failed batch task", "rerun for a new cohort">
 **Don't touch without thinking:** <files/configs with non-obvious dependents>
-**Non-obvious state:** <where data actually lives if not under output/; external state that matters>
+**Non-obvious state:** <where data actually lives if not under results/; external state that matters>
 
 ## Purpose
 
@@ -225,6 +227,32 @@ See [`REPORT.md`](REPORT.md) for the full results, findings, and exploratory int
    `Up:` links climb `../../../` to reach the root.
 7. **Report:** path(s) written; one-line summary of change (new vs backfill vs reconcile); any open
    question you couldn't resolve from code (unclear status, no entry point, missing canonical run).
+
+### Next skill
+
+- **After the top-level index (A)** → **`readme <dir>`** for each subproject that is listed but has
+  no README of its own. Name them.
+- **After a subproject README (B)** → **`plan-analysis`** if the stage is scaffolded but not built;
+  **`report-findings <dir>`** if it has produced results but `## Results` still says *Pending*.
+- **All READMEs current** → **`plan-analysis`** for the next stage.
+
+## Bulk pass: spawning Explore for inventory
+
+**Only when the user asks for several subprojects in one go.** At that size — roughly 7 or more
+folders — a read-only inventory agent per folder gains more than it costs. For one or two, just read
+them yourself; spawning costs more than it saves.
+
+Spawn one **Explore** agent (read-only) per subproject folder with a focused request:
+```
+Inventory <subproject-dir>: list the files in bin/, the orchestrator entry (main.nf / Snakefile),
+param/config files, and cross-references (Grep for gs://, s3://, upstream).
+```
+
+Explore returns: file inventory, not the README. **You write the README from its output** using this skill's
+templates. The templates stay in exactly one place — never duplicate them into agent instructions.
+
+Parallel Explore runs speed up the discovery phase across multiple folders. Then anchor each README
+into the index sequentially (the `readme` skill itself does this per invocation).
 
 ## Anti-patterns to avoid
 

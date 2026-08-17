@@ -185,6 +185,28 @@ grep -rn '\.\./\.\./\.\.' --include='*.nf' --include='*.config' --include='*.py'
   --include='*.sh' . 2>/dev/null | head
 ```
 
+### If the repo has an Analysis Design Document
+
+```bash
+ls -1 ANALYSIS_DESIGN.md *ANALYSIS_DESIGN*.md 2>/dev/null
+```
+
+On a greenfield project the detection sweep comes back nearly empty — there is no `main.nf` to find
+because nothing has been built yet. An ADD (from the `analysis-design` skill) is the substitute: its
+**§7 Pipeline / compute architecture** declares the orchestration engine, profile, compute backend
+and container, and its **§4 Data** declares the schemas. Take both as the five-axis answer and the
+schema section.
+
+**Tag them as declared, not detected** — this is the distinction that keeps the file honest:
+
+```markdown
+- **Orchestration:** Nextflow *(declared in ANALYSIS_DESIGN.md §7; no `main.nf` on disk yet)*
+```
+
+Where the ADD and the code disagree — the ADD says Snakemake, a `main.nf` exists — the **code wins**
+and the divergence is a conflict: flag it exactly as in Phase 0, since a design doc drifting from
+what was actually built is the same failure as a stale `CLAUDE.md`.
+
 ### Worked classification (example, end-to-end)
 
 A repo that clusters UK Biobank phenotypes by GWAS signature then runs gene/disease follow-ups
@@ -301,10 +323,13 @@ under `scripts/<arm>/`. Create this layout before writing any code in a new subp
 <root>/                            housekeeping only
 ├── README.md                      index of arms + stages
 ├── REPORT.md                      rollup of subproject reports
-├── CLAUDE.md
+├── CLAUDE.md                      these rules
+├── MEMORY.md                      index of durable memory files, one line each
+├── AGENTS.md                      Codex twin of CLAUDE.md, where one exists
+├── ANALYSIS_DESIGN.md             project-scoped ADD, where one exists
 ├── NOTICE.md                      third-party provenance, when vendoring
 ├── .gitignore, .gcloudignore
-├── .claude/                       skills, agents, settings, handover/
+├── .claude/                       settings.json, skills/, handover/, plans/
 ├── docker/                        image builds              (root exception)
 ├── <ENGINE_FORK>/                 vendored library          (root exception)
 └── scripts/
@@ -314,6 +339,7 @@ under `scripts/<arm>/`. Create this layout before writing any code in a new subp
         │                          frozen_decisions, open_decisions, blockers,
         │                          input_contract, phases, closure_gates,
         │                          known_hazards. Not read by any pipeline.
+        ├── ANALYSIS_DESIGN.md     arm-scoped ADD, where the arm has its own
         └── <stage>_<ARM>/
             ├── README.md          required
             ├── bin/               required — scripts the pipeline calls
@@ -321,7 +347,7 @@ under `scripts/<arm>/`. Create this layout before writing any code in a new subp
             ├── params/            required — one file per run stage
             ├── tests/             required
             ├── docs/              required
-            ├── results/           required
+            ├── results/           required — run outputs, `results/<run-tag>/`
             ├── REPORT.md          when the stage closes
             └── figures/ data/ logs/ …    optional, created on demand
 ```
@@ -332,6 +358,10 @@ under `scripts/<arm>/`. Create this layout before writing any code in a new subp
   path — e.g. `${projectDir}/../../../<ENGINE_FORK>/<pkg>/<module>.py` — breaks silently if the
   stage moves up or down a level. Treat the depth of `scripts/<arm>/<stage>/` as fixed.
 - **Required dirs are created up front, even empty.** Optional ones are created when first needed.
+- **Run outputs go in the stage's `results/`**, one subdirectory per run tag
+  (`results/<run-tag>/`). There is no `output/` directory — a stage that grows one has drifted.
+- **Agent working files live under `.claude/`**: `handover/` for dated session state, `plans/` for
+  implementation plans. Nothing agent-generated belongs at the repo root.
 - <Note any deviation this repo actually has, and why — do not pretend the standard is met.>
 
 ### This repo's tree
@@ -414,6 +444,10 @@ variants that must never feed a pipeline).>
 - **Ending a session mid-work:** use the `handover` skill — it writes
   `.claude/handover/YYYY-MM-DD_<topic>.md` (state, next action, decisions, corrections). `prime`
   reads the newest one, so the next session resumes instead of re-deriving.
+- **Durable knowledge vs session state:** a handover is disposable once its work lands. Facts that
+  outlive it — an environment quirk, a schema gotcha, an analyst preference — go to memory files
+  indexed one line each in `MEMORY.md`, which `prime` reads on every session. Repo-wide conventions
+  belong here in `CLAUDE.md` instead; memory is for what this file cannot state.
 - **Orientation:** `prime`. **Committing:** `commit`.
 
 ---
@@ -487,13 +521,15 @@ If a note from a previous run is already there, refresh its date rather than add
 1. Resolve the conflicts listed above; delete each `<!-- CONFLICT: … -->` marker as you go.
 2. File or delete anything left in `## Unsorted`.
 3. Review `CLAUDE.md`; correct any schema column you had to infer.
-4. Run `readme` for the top-level index + each subproject.
-5. Confirm the canonical run/params table.
+4. Confirm the canonical run/params table.
+
+### Next skill
+**`readme top-level`** — the index README, which `plan-analysis` reads to place a new stage in the
+DAG. Then `readme <dir>` per existing subproject, then `plan-analysis` for new work.
 ```
 
-Report what you did, not what the repo should look like. **No directories were created, nothing was
-moved, and the repo was not audited against the folder-structure standard** — if the layout does not
-match, that shows up as a note inside `## Folder structure`, not as an action here.
+Report what you did, not what the repo should look like. Per **Non-goals**, a layout that does not
+match the standard shows up as a note inside `## Folder structure` — never as an action taken here.
 
 ---
 
@@ -511,9 +547,8 @@ match, that shows up as a note inside `## Folder structure`, not as an action he
 - **On a re-run, restructuring is the job; rewriting is not.** The value is a file whose *shape* is
   predictable, not whose *prose* is yours. If you find yourself improving a sentence that was
   already accurate, stop — that is churn, and it buries the real diff.
-- **When in doubt about a block's class, treat it as reproducibility-critical.** The cost of
-  relocating something verbatim that didn't need it is a few lines. The cost of rewriting a pin's
-  justification, and losing the reason behind it, is a silent regression months later.
-- **Deviations from the folder standard are documented, not fixed.** Write what the repo actually
-  looks like and why it diverges. Moving a stage can break relative-path resolution — that is the
-  author's call to make, with the pipeline in front of them.
+- **The classification asymmetry is why Phase 0 defaults to reproducibility-critical.** Relocating
+  something verbatim that didn't need it costs a few lines. Rewriting a pin's justification, and
+  losing the reason behind it, is a silent regression months later.
+- **Say why a deviation exists, not that it should be fixed.** Moving a stage can break relative-path
+  resolution — that is the author's call to make, with the pipeline in front of them.

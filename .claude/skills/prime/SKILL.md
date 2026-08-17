@@ -11,8 +11,8 @@ minimal git state.
 ## Objective
 
 Fast orientation on what the project studies, how data flows, and where things are. Leans on
-`CLAUDE.md` as the authoritative source; supplements with the top-level README, the most recent
-handover document, and a structure snapshot.
+`CLAUDE.md` as the authoritative source; supplements with the top-level README, durable memory, the
+most recent handover document, and a structure snapshot.
 
 ## Process
 
@@ -41,11 +41,16 @@ cat README.md 2>/dev/null || cat scripts/README.md 2>/dev/null
 `YYYY-MM-DD_<topic>.md`, so the newest sorts last. **Read only the newest** — older ones are a dated
 trail and are very likely stale.
 
+Match the date pattern explicitly rather than taking the last thing `ls` prints — a stray `README.md`
+or `notes.md` in that directory sorts after any date and would win a bare `ls | tail -1`:
+
 ```bash
-ls .claude/handover/ 2>/dev/null | tail -1
+ls .claude/handover/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]_*.md 2>/dev/null | sort | tail -1
 ```
 
-Then judge relevance before using it, unless the user pointed you at specific work:
+Then **read the file it names** — the listing is only how you find it.
+
+Judge relevance before using it, unless the user pointed you at specific work:
 
 - **Relevant** — its topic matches what the user is asking about, or the user gave no task at all
   (they are resuming). Surface it in the report: current state, the next action it names, and any
@@ -57,14 +62,29 @@ A handover is a snapshot of the session that wrote it, not a source of truth. Wh
 with `CLAUDE.md`, the README, or the actual repo state, the repo wins — say so if you spot a
 conflict.
 
-### 4. Minimal structure check
+### 4. Read the memory index (if one exists)
+
+Durable knowledge that outlived the session that found it — environment quirks, schema gotchas,
+analyst preferences. `handover` §5 writes these; this is where they get read back.
+
+```bash
+cat MEMORY.md 2>/dev/null || echo "no memory index"
+```
+
+`MEMORY.md` is a one-line-per-memory index, not the content. Read only the entries whose hook is
+relevant to the task at hand — pulling every linked file in defeats the point of the index.
+
+A memory reflects what was true when it was written. If one names a file, flag, or column, verify it
+still exists before acting on it.
+
+### 5. Minimal structure check
 
 ```bash
 ls -la | grep -E '^d'          # top-level dirs
 ls scripts/ 2>/dev/null        # stages, if the project uses a scripts/ tree
 ```
 
-### 5. Current state (only if needed)
+### 6. Current state (only if needed)
 
 ```bash
 git status
@@ -99,3 +119,11 @@ Keep it scannable — bullets, not prose. Link to memory files / stage READMEs f
 - Date + topic of the newest handover, and its stated **next action**.
 - Anything in flight (running jobs, uncommitted work) and any correction it flags.
 - If it is stale or contradicts the repo, say so rather than repeating it.
+
+### Next skill
+- **A relevant handover exists** → follow its §2 next action directly. No skill needed; that is the
+  whole point of having written it.
+- **No `CLAUDE.md`** → `create-rules` (or `analysis-design` first, if the repo has no code yet —
+  see the ordering in the project README).
+- **No top-level `README.md`, or subprojects missing from its index** → `readme top-level`.
+- **Oriented and ready for new work** → `plan-analysis`.

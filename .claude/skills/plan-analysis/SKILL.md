@@ -1,6 +1,7 @@
 ---
 name: plan-analysis
 description: "Create a comprehensive, context-rich plan for a new analysis or pipeline stage through repo + data + methods research"
+argument-hint: "[analysis or stage to plan]"
 ---
 
 # Plan an analysis / pipeline stage
@@ -21,6 +22,30 @@ runnable validation commands — so it succeeds on the first attempt without re-
 
 The unit here is an **analysis** or **pipeline stage**, not a software "feature". Artifacts are
 datasets, sumstats, matrices, manifests, figures — not API endpoints.
+
+## Running inside plan mode
+
+Compatible, and worth doing for expensive work — but **do not produce two plans**.
+
+This skill and plan mode are the same shape: read-only research, then a plan, then hand off. Plan
+mode contributes the enforcement and the gate; this skill contributes the content.
+
+- **Phases 1–4 are the plan-mode research phase.** No change to how you run them.
+- **Phase 5's template replaces the generic plan structure.** Write it into the plan file verbatim —
+  schema contracts, controls, runnable validation commands and all. A generic Context/Approach/
+  Verification plan here would discard exactly what makes this skill worth invoking.
+- **On approval, the draft becomes the artifact:** write it to `.claude/plans/{kebab-case-name}.md`.
+  The plan file is session scratch; the repo copy is what gets committed, reviewed, and cited by a
+  later `handover`. One document, written once, with an approval gate in the middle.
+
+**Why bother.** Line 15's "we do NOT run the analysis or write production code in this phase" is a
+principle this skill states and nothing enforces. In plan mode the harness enforces it — which
+matters most in Phase 2, where you inspect real data, and Phase 3, where you research methods.
+Both are read-heavy phases operating next to upstream trees that must not be written to.
+
+**When it earns its cost:** the stage launches something expensive or irreversible (a cloud batch
+run, a write to shared storage), or the method is unfamiliar enough that you want a human gate before
+anything runs. For a routine stage at smoke scale, skip it — the skill's own discipline is enough.
 
 ## Planning process
 
@@ -174,8 +199,13 @@ There is usually no unit-test suite. Validate by:
 
 ## Output format
 
-**Filename**: `.agents/plans/{kebab-case-name}.md` (create the dir if absent).
+**Filename**: `.claude/plans/{kebab-case-name}.md` (create the dir if absent).
 Examples: `add-coloc-bridge-stage.md`, `reharmonise-finngen-r12.md`, `sensitivity-rint-vs-log.md`.
+
+Agent working files all live under `.claude/` — `plans/` here, `handover/` for session state. If the
+repo carries plans under some other path from a previous convention, write new ones to
+`.claude/plans/` and leave the old ones where they are; do not migrate them as a side effect of
+planning.
 
 ## Quality criteria
 
@@ -189,3 +219,11 @@ Examples: `add-coloc-bridge-stage.md`, `reharmonise-finngen-r12.md`, `sensitivit
 
 After writing the plan, return: summary of the analysis + approach; full path to the plan; complexity
 and main risk; and a confidence score (#/10) for one-pass execution.
+
+### Next skill
+
+**`execute <plan-path>`** — quote the full path so it can be run verbatim.
+
+If the confidence score is below ~7/10, say what would raise it *before* executing (an unresolved
+schema, an unconfirmed method call, a missing control expectation) — a plan executed at low
+confidence usually costs more than the round trip to firm it up.

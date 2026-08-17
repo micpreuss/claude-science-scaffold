@@ -25,10 +25,46 @@ Create a new commit for uncommitted changes. Choose commit detail level via the 
 
 ## Workflow
 
-1. Run `git status && git diff HEAD` to review changes
-2. Stage untracked and modified files
+1. Run `git status --porcelain && git diff HEAD --stat` to review changes. `git diff HEAD` alone
+   does **not** show untracked files — `--porcelain` is what surfaces them.
+2. **Screen untracked paths before staging** (see below), then stage what survives the screen.
 3. Compose the commit message (length/detail depends on `mode`)
 4. Create the commit with a conventional-commits tag
+
+### Staging guard — do not blanket-stage a science repo
+
+This is the one workflow step where a generic `git add -A` habit does real damage. Analysis repos
+routinely hold, untracked and unignored, things that must never enter git history: run outputs under
+`results/`, scratch `data/`, orchestrator `work/` and `.nextflow/` trees, `logs/`, figure dumps, and
+— the costly one — service-account keys or tokens pasted into a `params/` or `configs/` file.
+
+Before staging, list untracked paths and screen them:
+
+```bash
+git status --porcelain --untracked-files=all
+git check-ignore -v <path>...   # which .gitignore rule, if any, already covers these
+```
+
+- **Never auto-stage** anything under `results/`, `data/`, `logs/`, `work/`, `.nextflow/`, `figures/`,
+  or any file over ~1 MB. Name them to the user and let them decide.
+- **A credential-shaped file is a stop, not a prompt.** If an untracked config or params file holds
+  something that looks like a key, token, or connection string, say so and stage nothing until the
+  user responds.
+- **An untracked artifact that should have been ignored is a `.gitignore` bug.** Offer the rule
+  rather than staging the file — the scaffold's `.gitignore` ships commented patterns for exactly
+  these paths.
+- Modified files already tracked in git are safe to stage without this screen.
+
+## Next skill
+
+Report the SHA and the one-line subject, then name what follows from what was just committed:
+
+- Committed a **finished stage whose results are not yet written up** → `report-findings <dir>`.
+  If the commit you just made *contained* the `REPORT.md`, this step is already done — skip it and
+  fall through to the next rule rather than looping back.
+- Committed **partial work** and the session is ending → `handover <topic>`
+- Committed a **new stage** that changed the DAG → `readme top-level` to re-anchor the index
+- Otherwise → back to `plan-analysis` for the next stage, or nothing.
 
 ## Tags
 

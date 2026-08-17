@@ -103,7 +103,12 @@ session finished work an older one describes, one line in §1 saying so is enoug
 
 Handover is *task state* — disposable once the work lands. Memory is *durable knowledge* — the
 environment quirk, the schema gotcha, the user preference that still matters in three months. Write
-those as memory files with a `MEMORY.md` pointer and **link** them here; never copy.
+those as memory files with a one-line `MEMORY.md` pointer and **link** them here; never copy.
+
+This is the half of the handover that survives the handover: `prime` reads `MEMORY.md` on every
+session, whereas it reads only the *newest* handover and treats older ones as stale. A durable fact
+left in a dated file is a fact with an expiry date on it. Repo-wide conventions are neither — those
+belong in `CLAUDE.md`.
 
 ### 6. Cold-read check
 
@@ -192,3 +197,11 @@ README, `CLAUDE.md`, or memory — and say whether you fixed the source or it is
   tool call is productive.
 - **Do not launder uncertainty.** If you don't know whether a run finished, write "unknown — check
   with `<command>`". A confident wrong statement is worse than an admitted gap.
+
+## Next skill
+
+Nothing further this session — writing the handover *is* the last act. State the path and stop.
+
+Two exceptions worth naming in the report: **`commit`**, if the handover references uncommitted work
+that would be safer on disk than in a diff; and the reminder that the next session opens with
+**`prime`**, which reads this file automatically.

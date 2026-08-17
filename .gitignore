@@ -5,6 +5,7 @@
 *.swp
 .idea/
 .vscode/
+*.code-workspace
 
 # IMPORTANT: this scaffold SHIPS the .claude/ folder — it is the payload.
 # Do NOT add `.claude/` to this file. (Most real projects gitignore .claude;

@@ -20,6 +20,26 @@ the ADD into a runnable implementation plan).
 
 Write the ADD to: `$ARGUMENTS` (default: `ANALYSIS_DESIGN.md`).
 
+Per the folder standard in `CLAUDE.md`, that default is the repo root for a **project-scoped** ADD.
+An ADD that scopes a single arm goes to `scripts/<arm>/ANALYSIS_DESIGN.md` instead, alongside that
+arm's `project_<ARM>.yaml` — the structured, living counterpart to this document.
+
+## Running inside plan mode
+
+Compatible, and a good fit for a substantial new project or arm — but **do not write the ADD twice**.
+
+- **Draft the ADD into the plan file**, using the section structure below rather than a generic plan
+  layout. The ADD *is* the plan; a plan describing an ADD you are about to write is pure duplication.
+- **On approval, write it to its real path** (`ANALYSIS_DESIGN.md`, or the arm path above).
+- **Use the clarification step for the decisions that must not be guessed.** Plan mode surfaces
+  questions before the document is finalized, which is exactly where the rule under Notes belongs —
+  a missing cohort, estimand, or control is a question for the analyst, never a reasonable default.
+  Assumptions you *do* fill in still get flagged as assumptions.
+
+Scoping is where a wrong turn is cheapest to correct and most expensive to miss, so the approval gate
+is worth more here than anywhere else in the workflow. For a single stage inside an existing project,
+skip both this skill and plan mode — go straight to `plan-analysis`.
+
 ## ADD structure
 
 Adapt depth to available information. Use ✅ / ❌ checkboxes for in/out-of-scope items.
@@ -117,7 +137,17 @@ After writing the ADD:
 1. Confirm the file path.
 2. Summarize the question, aims, and headline method.
 3. List assumptions made where information was missing.
-4. Suggest next steps — typically: run `plan-analysis` on the first stage; set up the canonical params.
+
+### Next skill
+
+- **Greenfield** (the repo has no code yet, or no `CLAUDE.md`) → **`create-rules`**. The ADD's §7
+  (pipeline/compute architecture) and §4 (data schemas) are exactly what it would otherwise have to
+  detect from code that does not exist yet, so it can transcribe them as *declared*. Then
+  `readme top-level`, then `plan-analysis` on the ADD's first stage.
+- **Brownfield** (conventions already captured in `CLAUDE.md`) → straight to **`plan-analysis`** on
+  the first stage. Re-run `create-rules` later, once the new stage exists.
+
+Say which case applies and name the exact next invocation.
 
 ## Notes
 

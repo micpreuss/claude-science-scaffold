@@ -10,6 +10,15 @@ argument-hint: "[path-to-plan]"
 
 Read plan file: `$ARGUMENTS`
 
+## Plan mode: exit first
+
+**This skill cannot run in plan mode.** Implementing tasks and running validation commands are
+exactly what plan mode forbids. Plan mode is this skill's precursor, not a wrapper for it.
+
+If you are in plan mode holding a finished plan, that is the signal to **exit**, not to plan again.
+Do not re-derive a plan `plan-analysis` already wrote — call `ExitPlanMode`, get approval, then
+execute the existing plan against its own tasks and acceptance criteria.
+
 ## Execution Instructions
 
 ### 1. Read and Understand
@@ -83,7 +92,20 @@ Before completing:
 ```
 
 ### Ready for Commit
-- Confirm changes complete and validations pass; ready for the `commit` skill
+- Confirm changes complete and validations pass
+
+### Next skill
+
+In order, skipping what does not apply:
+
+1. **`readme <dir>`** — if this created a new subproject, it has no README yet and is not anchored
+   in the index.
+2. **`commit`** — validations pass, so the work is committable.
+3. **`report-findings <dir>`** — only if the stage produced *results*, not merely code that runs. A
+   passing smoke run is not a result.
+4. **`handover <topic>`** — if the plan is only partly executed and the session is ending.
+
+Name the exact next invocation, and say plainly which plan tasks are still outstanding.
 
 ## Notes
 

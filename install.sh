@@ -32,7 +32,7 @@ for arg in "$@"; do
     --merge)   MODE="merge" ;;
     --force)   MODE="force" ;;
     --dry-run) DRY=1 ;;
-    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
     -*)        die "unknown flag: $arg" ;;
     *)         TARGET="$arg" ;;
   esac
@@ -61,4 +61,7 @@ else
   die "$DEST already exists. Re-run with --merge (add new files only) or --force (overwrite with backup)."
 fi
 
-info "Done. Next: open the project in Claude and run /prime, then /create-rules."
+info "Done. Open the project in Claude, then:"
+info "  empty repo (greenfield)  ->  /analysis-design, then /create-rules"
+info "  existing code            ->  /create-rules, then /readme top-level"
+info "Already have a CLAUDE.md?  ->  /prime"

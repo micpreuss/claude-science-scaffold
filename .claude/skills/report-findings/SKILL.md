@@ -25,7 +25,7 @@ masquerade as a finding.
 ## Where it goes — three files, in this order
 
 1. **`REPORT.md` at the subproject root** — the canonical/latest run's report. This is the default.
-   For a run-specific report, write `output/<run-tag>/REPORT.md` and have the subproject `REPORT.md`
+   For a run-specific report, write `results/<run-tag>/REPORT.md` and have the subproject `REPORT.md`
    link to the per-run ones.
 2. **The subproject README's `## Results` section** — a 2–4 line headline + a link to `REPORT.md`.
    The README stays the scannable index; the report carries the detail. (Use the `readme` skill's
@@ -71,8 +71,8 @@ it came from — not what it means yet.>
 
 | Metric / output | Value | Source artifact |
 |---|---|---|
-| <e.g. clusters recovered> | <e.g. 15> | `output/<run>/…` |
-| <e.g. positive control PP.H4 (HMGCR↔LDL)> | <e.g. 0.97 — PASS> | `output/<run>/…` |
+| <e.g. clusters recovered> | <e.g. 15> | `results/<run-tag>/…` |
+| <e.g. positive control PP.H4 (HMGCR↔LDL)> | <e.g. 0.97 — PASS> | `results/<run-tag>/…` |
 
 <Controls: state explicitly which passed/failed.>
 
@@ -181,7 +181,7 @@ number. Lifted from the subproject report's Findings — never from its interpre
    - Anything causal/speculative goes under **Exploratory interpretation** with hedged wording and a
      "to confirm" note — never under Findings.
    - Every Results-table number must trace to a named artifact.
-4. **Write** `REPORT.md` (subproject root by default; `output/<run>/REPORT.md` for run-specific).
+4. **Write** `REPORT.md` (subproject root by default; `results/<run-tag>/REPORT.md` for run-specific).
 5. **Update the subproject README:** insert/refresh the `## Results` headline + link. If the README
    lacks a `## Results` section, add it (per `readme` Template B) directly before `## Related`.
 6. **Roll up to the root `REPORT.md`:** create it from the template if absent (with the synthesis
@@ -191,6 +191,14 @@ number. Lifted from the subproject report's Findings — never from its interpre
    statements you placed under *interpretation* vs *findings*, so the author can sanity-check the
    split; and, if the root file was created, a note that `## Synthesis` is waiting on them.
 
+### Next skill
+
+- **`commit`** — the report, the README pointer and the rollup are three files that belong in one commit.
+- Then, whichever fits: **`plan-analysis`** for the next stage in the workflow order,
+  **`handover <topic>`** if the session is ending with work still open, or nothing at all if this
+  closed the last subproject — in which case say so, and point at the root `REPORT.md` synthesis
+  section as the remaining human task.
+
 ## Anti-patterns to avoid
 
 - **Interpretation creep** — writing "X causes Y" in Findings when the data only shows association.
@@ -198,7 +206,7 @@ number. Lifted from the subproject report's Findings — never from its interpre
 - **Numbers without a source** — every value cites the artifact it came from.
 - **Over-long reports** — this is a 1–2 minute read, not a manuscript. Push depth into the artifacts.
 - **Silent overwrite** — if `REPORT.md` exists for a different run, don't clobber it; write the new
-  run's report under `output/<run>/` and link both from the root.
+  run's report under `results/<run-tag>/` and link both from the root.
 - **Confident hedging** — interpretation bullets must actually read as tentative; pair each with what
   would test it.
 - **Writing the root synthesis** — the tempting one. You have just read a report in detail and the
