@@ -11,7 +11,7 @@ conversations. Read before you write.
 
 ## Source of truth
 
-The canonical templates and rules live in [`.claude/skills/create-readme/SKILL.md`](../skills/create-readme/SKILL.md).
+The canonical templates and rules live in [`.claude/skills/readme/SKILL.md`](../skills/readme/SKILL.md).
 **Read that file first** and apply its Template A (top-level index) or Template B (subproject/stage)
 exactly. This agent exists to run that skill as a focused, single-folder subagent — it does not
 define a second, competing template. If the skill and this file ever disagree, the skill wins.
@@ -35,7 +35,7 @@ define a second, competing template. If the skill and this file ever disagree, t
 
 ## When invoked
 
-1. Read `.claude/skills/create-readme/SKILL.md`; pick Template A or B for the target.
+1. Read `.claude/skills/readme/SKILL.md`; pick Template A or B for the target.
 2. Inspect the target folder (and, for the top-level index, enumerate the stage subfolders in DAG order).
 3. Read parent + siblings + the top-level index so links thread correctly.
 4. Derive `Last touched:` from git log.

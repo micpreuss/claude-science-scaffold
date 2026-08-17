@@ -1,7 +1,7 @@
 ---
 name: analysis-design
 description: Create an Analysis Design Document (ADD) for a scientific analysis or project from the conversation
-argument-hint: [output-filename]
+argument-hint: "[output-filename]"
 ---
 
 # analysis-design: Generate an Analysis Design Document

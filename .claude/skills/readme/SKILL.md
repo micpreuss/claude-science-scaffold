@@ -1,10 +1,10 @@
 ---
-name: create-readme
+name: readme
 description: Create or update the top-level project README (subproject index) or a subproject/stage README, using canonical scientific-pipeline templates
-argument-hint: [top-level | <subproject-dir>]
+argument-hint: "[top-level | <subproject-dir>]"
 ---
 
-# create-readme
+# readme
 
 Write and maintain two kinds of README for a scientific pipeline repo:
 
@@ -38,6 +38,7 @@ under "Workflow order", and every subproject README links back up (`Related → 
 ## Which template?
 
 - Argument `top-level` (or you're at repo root and asked for "the project README") → **Template A**.
+- Argument is an arm directory (`scripts/<arm>/`) → **Template A, arm variant** (see below).
 - Argument is a subproject directory (or you're inside a stage folder) → **Template B**.
 - No argument → infer from cwd: a folder that *contains* stage subfolders → A; a leaf stage → B.
 
@@ -73,13 +74,17 @@ with its own README. Read them in the order below to catch up on the work.
 
 ## Workflow order
 
-<Numbered list — ONE list item per subproject. Each item: linked folder, a one-line role, and
-optionally its status. THIS is where a new subproject anchors itself.>
+<Numbered list — ONE list item per subproject, at its real path under `scripts/<arm>/`. Each item:
+linked folder, a one-line role, and optionally its status. THIS is where a new subproject anchors
+itself. On a multi-arm project, group the list under a `### <arm>` subheading per arm.>
 
-1. [setup/](setup/README.md) — <one-line role>. *one-time.*
-2. [preprocessing/](preprocessing/README.md) — <one-line role>.
-3. [pipeline/](pipeline/README.md) — <one-line role>.
+1. [provenance_ARM/](scripts/<arm>/provenance_ARM/README.md) — <one-line role>. *one-time.*
+2. [clustering_ARM/](scripts/<arm>/clustering_ARM/README.md) — <one-line role>.
+3. [reports_ARM/](scripts/<arm>/reports_ARM/README.md) — <one-line role>.
 4. ...
+
+<Libraries are not stages. List a vendored engine fork or `docker/` separately, marked
+"*library, not a stage*", so nobody reads it as a step in the workflow.>
 
 ## Data flow at a glance
 
@@ -89,9 +94,15 @@ optionally its status. THIS is where a new subproject anchors itself.>
 
 - <2–3 bullets on what flows between stages and what must never be crossed>
 
+## Results
+
+<One line per reported subproject, or "Pending — no subproject has reported yet.">
+See [`REPORT.md`](REPORT.md) for the project-level rollup and cross-subproject synthesis.
+
 ## Conventions
 
 <Short pointers only — link to CLAUDE.md for the authoritative convention text.>
+- **Layout:** every subproject lives at `scripts/<arm>/<stage>_<ARM>/` — see CLAUDE.md § Folder structure.
 - **Compute:** <where stages submit from / run>
 - **Storage:** <bucket/scratch root + subtree layout>
 - **Schemas:** <the one or two most load-bearing column contracts, or "see CLAUDE.md">
@@ -101,7 +112,19 @@ optionally its status. THIS is where a new subproject anchors itself.>
 
 When a new stage is created, add (don't replace) one list item under **Workflow order** at the
 correct position in the DAG, and, if the stage changes the data flow, update the diagram. Keep the
-list item to a single line: `N. [<dir>/](<dir>/README.md) — <role>.` Verify the link resolves.
+list item to a single line: `N. [<stage>/](scripts/<arm>/<stage>/README.md) — <role>.` Paths are
+relative to the repo root, so they carry the full two-tier depth — **verify the link resolves**
+before writing it; a plausible-looking `<stage>/README.md` that skips `scripts/<arm>/` is the
+easiest mistake to make here.
+
+### Arm-level variant
+
+A project with more than one arm gives each arm its own `scripts/<arm>/README.md`: Template A scoped
+to that arm's stages. Keep `Purpose`, `Workflow order`, `Data flow`, and `Results`; drop the
+project-wide `Canonical datasets and runs` and `Conventions` (they belong to the root), and open with
+a link back to the root README. The arm's `project_<ARM>.yaml` control plane — question,
+frozen/open decisions, blockers, phases, closure gates, known hazards — is the companion file; link
+it from `Purpose` rather than restating it.
 
 ---
 
@@ -177,13 +200,14 @@ See [`REPORT.md`](REPORT.md) for the full results, findings, and exploratory int
 - Upstream: <link(s) to upstream stage README(s)>
 - Downstream: <link(s) to downstream stage README(s)> — or `none — terminal`
 - Sibling: <if applicable>
+- Up: [arm README](../README.md) · [project index](../../../README.md)
 ````
 
 ---
 
 ## Workflow when invoked
 
-1. **Resolve mode** (A vs B) from the argument or cwd.
+1. **Resolve mode** (A / A-arm / B) from the argument or cwd.
 2. **Inspect** the target folder (or, for A, the set of stage subfolders): read orchestrator entry,
    params/configs, `bin/` scripts; grep for `gs://`/`s3://`/`/scratch` paths and cross-references.
 3. **Read parent + siblings** so links thread correctly. For A, enumerate the stage subfolders in
@@ -194,8 +218,11 @@ See [`REPORT.md`](REPORT.md) for the full results, findings, and exploratory int
    - **Existing README:** if `## Orientation` (B) or `## Results` (B) is missing, backfill it in place;
      reconcile structural drift against the template but **preserve substantive existing prose** — don't
      rewrite accurate content just to match phrasing.
-   - For B, also **anchor the stage** into Template A's "Workflow order" (add the one-line list item if absent).
-6. **Cross-reference integrity:** verify every link resolves (read/glob) before writing it.
+   - For B, also **anchor the stage** into Template A's "Workflow order" (add the one-line list item
+     if absent) — and into the arm README's list too, when the project has arms.
+6. **Cross-reference integrity:** verify every link resolves (read/glob) before writing it. Pay
+   particular attention to depth: root-README links carry `scripts/<arm>/<stage>/`, stage-README
+   `Up:` links climb `../../../` to reach the root.
 7. **Report:** path(s) written; one-line summary of change (new vs backfill vs reconcile); any open
    question you couldn't resolve from code (unclear status, no entry point, missing canonical run).
 

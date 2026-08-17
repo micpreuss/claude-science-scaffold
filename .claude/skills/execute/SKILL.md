@@ -1,7 +1,7 @@
 ---
 name: execute
 description: Execute an implementation/analysis plan
-argument-hint: [path-to-plan]
+argument-hint: "[path-to-plan]"
 ---
 
 # Execute: Implement from Plan

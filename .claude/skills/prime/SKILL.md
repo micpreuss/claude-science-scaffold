@@ -5,13 +5,14 @@ description: Prime agent with project context (scientific data/pipeline project)
 
 # prime
 
-Load project context quickly via `CLAUDE.md`, the workflow-index README, and minimal git state.
+Load project context quickly via `CLAUDE.md`, the workflow-index README, the latest handover, and
+minimal git state.
 
 ## Objective
 
 Fast orientation on what the project studies, how data flows, and where things are. Leans on
-`CLAUDE.md` as the authoritative source; supplements with the top-level README and a structure
-snapshot.
+`CLAUDE.md` as the authoritative source; supplements with the top-level README, the most recent
+handover document, and a structure snapshot.
 
 ## Process
 
@@ -34,14 +35,36 @@ point to the analytical pipeline.
 cat README.md 2>/dev/null || cat scripts/README.md 2>/dev/null
 ```
 
-### 3. Minimal structure check
+### 3. Read the latest handover (if one exists)
+
+`.claude/handover/` holds dated handover docs written at the end of previous sessions. Filenames are
+`YYYY-MM-DD_<topic>.md`, so the newest sorts last. **Read only the newest** — older ones are a dated
+trail and are very likely stale.
+
+```bash
+ls .claude/handover/ 2>/dev/null | tail -1
+```
+
+Then judge relevance before using it, unless the user pointed you at specific work:
+
+- **Relevant** — its topic matches what the user is asking about, or the user gave no task at all
+  (they are resuming). Surface it in the report: current state, the next action it names, and any
+  corrections in its §5.
+- **Not relevant** — the user asked about a different subproject. Note in one line that it exists
+  and what it covers, then move on. Do not load its detail into context.
+
+A handover is a snapshot of the session that wrote it, not a source of truth. Where it disagrees
+with `CLAUDE.md`, the README, or the actual repo state, the repo wins — say so if you spot a
+conflict.
+
+### 4. Minimal structure check
 
 ```bash
 ls -la | grep -E '^d'          # top-level dirs
 ls scripts/ 2>/dev/null        # stages, if the project uses a scripts/ tree
 ```
 
-### 4. Current state (only if needed)
+### 5. Current state (only if needed)
 
 ```bash
 git status
@@ -71,3 +94,8 @@ Keep it scannable — bullets, not prose. Link to memory files / stage READMEs f
 
 ### Current focus (if git checked)
 - Active branch; uncommitted changes, if present.
+
+### Resuming from handover (only if one was found and is relevant)
+- Date + topic of the newest handover, and its stated **next action**.
+- Anything in flight (running jobs, uncommitted work) and any correction it flags.
+- If it is stale or contradicts the repo, say so rather than repeating it.

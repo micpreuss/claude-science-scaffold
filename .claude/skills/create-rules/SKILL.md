@@ -13,6 +13,10 @@ This is **not** a web-app/library generator. The unit of work here is a *pipelin
 *analysis*, not a "feature"; the artifacts are *datasets, sumstats, matrices, manifests, figures*,
 not "API endpoints". Classify and describe accordingly.
 
+**Runs on any repo, with or without an existing `CLAUDE.md`.** If one exists, Phase 0 restructures it
+into the canonical skeleton while keeping every piece of information it holds. If not, Phase 0
+no-ops and the skill generates from scratch.
+
 ---
 
 ## Objective
@@ -22,7 +26,72 @@ Produce project-specific rules that tell Claude:
 - **What data** it operates on — formats, schemas, and what level of claim each representation permits.
 - **Where** compute runs (laptop / HPC scheduler / cloud batch) and where data lives (in-repo / object store / scratch).
 - **Which conventions** are load-bearing (column schemas, units, sign preservation, config-over-CLI).
+- **How** the repo is laid out — the folder-structure standard every subproject follows.
 - **How** to run a stage and **how** to validate it (there is rarely a unit-test suite — validation is positive controls, smoke runs, and schema checks).
+
+### Non-goals
+
+This skill **writes rules, it does not enforce them.** It never creates directories, never moves or
+renames files, and never audits the repo against the folder-structure standard it documents. A messy
+repo gets a correct `CLAUDE.md` and stays messy — cleaning up is a separate, deliberate act.
+
+The one exception is `AGENTS.md`, which gets a short sync note appended (Phase 3) and nothing else.
+
+---
+
+## Phase 0: INGEST — an existing CLAUDE.md is input, not an obstacle
+
+```bash
+test -f CLAUDE.md && wc -l CLAUDE.md || echo "greenfield — skip to Phase 1"
+```
+
+**No `CLAUDE.md`?** Skip this phase entirely; Phase 4 reports `mode: created`.
+
+**There is one?** Read it **in full** before running any detection command — you need to know what it
+claims before you check whether the claims hold. Then sort every block of content into one of four
+classes. The class decides what happens to the text, and this is the whole of the merge policy:
+
+| Class | What it looks like | Action |
+|---|---|---|
+| **Derivable** | repo tree, directory listings, file inventories, the stack table, the key-files list — anything you could regenerate by reading the repo | **Regenerate** from the repo in Phases 1–2. Discard the old text silently; no conflict, no prompt. |
+| **Asserted, agrees** | decisions, rationale, gotchas, schemas, naming conventions that the code confirms | **Carry forward verbatim** into the matching canonical section. Do not re-word to match the template's voice. |
+| **Asserted, conflicts** | a claim the repo contradicts — a status, a count, a "canonical run" that no longer exists | **Preserve verbatim, flag inline, list in Phase 4.** Never resolve it yourself. |
+| **Reproducibility-critical** | version pins and the reasoning behind them, container digests, known hazards, read-only-upstream constraints, positive-control thresholds, "do not move this" notes, failure post-mortems | **Never rewritten. Relocate only** — even when it looks stale, even when it is verbose. If unsure whether something is in this class, it is. |
+
+Stale *derivable* content is the common case and needs no ceremony: a `## Repository structure`
+block that is missing eight directories is simply regenerated.
+
+### Two hard rules
+
+**1. Nothing is dropped.** Content that fits no canonical section goes to the bottom under:
+
+```markdown
+## Unsorted (carried from previous CLAUDE.md)
+
+<verbatim blocks that had no canonical home. Left for the author to file or delete.>
+```
+
+Never delete a block because it seems redundant or low-value. Parking it costs a few lines; deleting
+someone's hard-won note costs them the knowledge.
+
+**2. Conflicts are flagged, not resolved.** Write the marker directly above the preserved text:
+
+```markdown
+<!-- CONFLICT: CLAUDE.md says <X>; <source>:<line> says <Y>. Preserved existing text. Resolve manually. -->
+```
+
+Worked example — a real one. `CLAUDE.md` carries `Status: BUILT, NEVER RUN`; the README's header says
+`Status: RUNNING` and `params/coarse_PPP.json` names a tag in flight. The repo is almost certainly
+right. Preserve the CLAUDE.md wording anyway:
+
+```markdown
+<!-- CONFLICT: CLAUDE.md says BUILT, NEVER RUN; README.md:16 says RUNNING (phases 0-4b closed,
+     phase 5 in flight). Preserved existing text. Resolve manually. -->
+**Status: BUILT, NEVER RUN.** No stage has launched.
+```
+
+You are not better placed than the author to know which is true — a status can be aspirational, a
+README can be the stale one, and a wrong auto-correction is invisible. Surface it and move on.
 
 ---
 
@@ -108,6 +177,12 @@ find . -type f -not -path '*/.git/*' | sed -E 's/.*(\.[a-z0-9]+(\.gz)?)$/\1/' \
 # the existing entry points and any workflow index
 find . -iname 'README*' -not -path '*/.git/*' | head
 git log -1 --format='%ai  %s' 2>/dev/null
+# layout: how far the repo already follows the folder-structure standard
+ls -d scripts/*/ scripts/*/*/ 2>/dev/null
+ls -1 CLAUDE.md AGENTS.md README.md REPORT.md NOTICE.md 2>/dev/null
+# relative-path escapes — these make a stage's depth load-bearing
+grep -rn '\.\./\.\./\.\.' --include='*.nf' --include='*.config' --include='*.py' \
+  --include='*.sh' . 2>/dev/null | head
 ```
 
 ### Worked classification (example, end-to-end)
@@ -149,7 +224,12 @@ Read code and headers; do **not** infer schemas from filenames.
 - **Units & sign** — log vs linear, `-log10(p)` vs `p`, OR vs beta, build GRCh37 vs 38, and any
   **sign-preservation** requirement (`b_SMR`, `rg`, `beta` signs that must survive aggregation).
 - **Parameterization** — config/params files vs CLI flags; where the *canonical* run params live.
-- **Naming** — dataset tags, run tags, `_with_features`/`_test` suffixes and what they mean.
+- **Naming** — dataset tags, run tags, `_with_features`/`_test` suffixes and what they mean. Watch
+  for an **arm suffix** (`_PPP`, `_RAWZ`, `_CM`) applied to directories, scripts, configs, params,
+  tests *and* output artifacts — where that convention holds it is near-total, and a file without
+  the suffix is usually a mistake. Note also whether ordering is carried by numbered prefixes
+  (`01_`, `02_`) or, more commonly, by prose in the README plus phase tags embedded mid-name
+  (`phase8_`, `phase9_`).
 - **Gotchas** — known data bugs, misdetections, crash modes (e.g. "`n_eff_mode=sum` → indefinite
   `cov_z` → MAGMA crash; use `max`"). One line each; these save hours.
 
@@ -158,7 +238,7 @@ Read code and headers; do **not** infer schemas from filenames.
 - Pipeline **entry points** (`main.nf`, `Snakefile`, top driver scripts).
 - **Canonical params/configs** (the one run that is "the answer").
 - **Data dictionary** (IDP key, sample sheet, ontology maps).
-- **Workflow-index README** (the top-level README that lists stages — see the `create-readme` skill).
+- **Workflow-index README** (the top-level README that lists stages — see the `readme` skill).
 - **Env/container** definitions and any handover/known-issue notes.
 
 ---
@@ -170,6 +250,11 @@ Read code and headers; do **not** infer schemas from filenames.
 Use the template below verbatim as the skeleton, then fill from Phases 1–2. Drop any section the
 repo genuinely lacks (say so rather than leaving a stub). Keep it terse and mechanistic — match the
 voice of the repo's own READMEs.
+
+**On a restructure**, the skeleton is a *destination*, not a rewrite mandate. Content classified in
+Phase 0 as *asserted-and-agreeing* or *reproducibility-critical* moves into its canonical section
+**verbatim** — the template tells you where a thing goes, never how to re-word it. Only derivable
+content is authored fresh.
 
 ````markdown
 # <project-name>
@@ -207,10 +292,52 @@ self-contained subdir with its own config, params, and scripts.">
 
 ---
 
-## Repository structure
+## Folder structure
+
+The root holds **housekeeping only**. Every analysis — including the first one — is a subproject
+under `scripts/<arm>/`. Create this layout before writing any code in a new subproject.
 
 ```
-<tree of the meaningful dirs with a one-line role each; mark the entry point "start here">
+<root>/                            housekeeping only
+├── README.md                      index of arms + stages
+├── REPORT.md                      rollup of subproject reports
+├── CLAUDE.md
+├── NOTICE.md                      third-party provenance, when vendoring
+├── .gitignore, .gcloudignore
+├── .claude/                       skills, agents, settings, handover/
+├── docker/                        image builds              (root exception)
+├── <ENGINE_FORK>/                 vendored library          (root exception)
+└── scripts/
+    └── <arm>/
+        ├── README.md              stage index for this arm
+        ├── project_<ARM>.yaml     control plane — question, provenance,
+        │                          frozen_decisions, open_decisions, blockers,
+        │                          input_contract, phases, closure_gates,
+        │                          known_hazards. Not read by any pipeline.
+        └── <stage>_<ARM>/
+            ├── README.md          required
+            ├── bin/               required — scripts the pipeline calls
+            ├── configs/           required — grid/config YAML, keep-lists
+            ├── params/            required — one file per run stage
+            ├── tests/             required
+            ├── docs/              required
+            ├── results/           required
+            ├── REPORT.md          when the stage closes
+            └── figures/ data/ logs/ …    optional, created on demand
+```
+
+- **The two root exceptions are libraries, not subprojects.** A vendored engine fork and `docker/`
+  stay at root; anything that *is* an analysis goes under `scripts/<arm>/`.
+- **Relative-path depth is load-bearing.** A stage that reaches a root-level library by relative
+  path — e.g. `${projectDir}/../../../<ENGINE_FORK>/<pkg>/<module>.py` — breaks silently if the
+  stage moves up or down a level. Treat the depth of `scripts/<arm>/<stage>/` as fixed.
+- **Required dirs are created up front, even empty.** Optional ones are created when first needed.
+- <Note any deviation this repo actually has, and why — do not pretend the standard is met.>
+
+### This repo's tree
+
+```
+<actual tree of the meaningful dirs with a one-line role each; mark the entry point "start here">
 ```
 
 <Point at the workflow-index README: "Read the relevant stage README before editing that stage.">
@@ -276,12 +403,17 @@ variants that must never feed a pipeline).>
 
 ## Working with this repo via Claude
 
-- **READMEs:** use the `create-readme` skill — one top-level index that lists each subproject as a
+- **READMEs:** use the `readme` skill — one top-level index that lists each subproject as a
   linked list item, plus a canonical per-subproject README (Orientation / Inputs / Outputs /
   Workflow / How to run / Gotchas / Results / Related).
 - **Finishing a subproject:** use the `report-findings` skill to write a `REPORT.md` (results,
-  findings, and a clearly non-binding exploratory interpretation) and link it from the subproject
-  README's Results section.
+  findings, and a clearly non-binding exploratory interpretation), link it from the subproject
+  README's Results section, and roll its headline up into the root `REPORT.md`.
+- **Starting a subproject:** create the layout in `## Folder structure` above before writing code.
+  Nothing creates it for you.
+- **Ending a session mid-work:** use the `handover` skill — it writes
+  `.claude/handover/YYYY-MM-DD_<topic>.md` (state, next action, decisions, corrections). `prime`
+  reads the newest one, so the next session resumes instead of re-deriving.
 - **Orientation:** `prime`. **Committing:** `commit`.
 
 ---
@@ -289,20 +421,44 @@ variants that must never feed a pipeline).>
 ## Out-of-scope / external links
 
 - <external web tools with no API (FUMA, SMR portal, COJO), sibling repos, accession sources>
+
+---
+
+## Unsorted (carried from previous CLAUDE.md)
+
+<Restructure only. Verbatim blocks that had no canonical home. Drop this section entirely if there
+are none — never leave it as an empty stub.>
 ````
 
 > **Encode the README + report workflow in the generated file.** The "Working with this repo via
-> Claude" section above is mandatory — it is how a future session discovers the `create-readme` and
-> `report-findings` skills.
+> Claude" section above is mandatory — it is how a future session discovers the `readme`,
+> `report-findings`, and `handover` skills.
+
+### If an `AGENTS.md` exists
+
+Some repos carry an `AGENTS.md` twin of `CLAUDE.md` for a different agent (Codex). It drifts, and a
+future session may read the stale one.
+
+**Do not mirror content into it** — it may hold agent-specific content that legitimately differs
+(its own memory path, its own tool conventions), and overwriting that is not this skill's call.
+Insert a short note directly after its H1, change nothing else in the file:
+
+```markdown
+> **Sync note — <YYYY-MM-DD>.** `CLAUDE.md` at the repo root was restructured by the `create-rules`
+> skill and is the authoritative version. This file has diverged. Please re-sync it against
+> `CLAUDE.md`, keeping the Codex-specific parts (memory path, tool conventions) as they are.
+```
+
+If a note from a previous run is already there, refresh its date rather than adding a second one.
 
 ---
 
 ## Phase 4: OUTPUT
 
 ```markdown
-## Global Rules Created
+## Global Rules <Created | Restructured>
 
-**File:** `CLAUDE.md`
+**File:** `CLAUDE.md`  ·  **Mode:** <created — no previous file | restructured from <N> lines>
 
 ### Project type (five-axis)
 - Orchestration / Compute / Domain / Data locality / Reproducibility: <one line each>
@@ -313,14 +469,31 @@ variants that must never feed a pipeline).>
 ### Load-bearing schemas captured
 <the interchange-file column contracts written into CLAUDE.md>
 
+### Conflicts preserved — UNRESOLVED   <restructure only; omit if none>
+<Each one: what CLAUDE.md claims, what the repo says and where, and that the existing text was kept.>
+1. <claim> — CLAUDE.md vs `<source>:<line>`. Existing text preserved, marked inline.
+
+### Carried forward   <restructure only; omit if none>
+- Reproducibility-critical blocks relocated verbatim: <N> (<one-line list: pins, hazards, constraints>)
+- Blocks parked in `## Unsorted`: <N> — <what they are, so the author can file or delete them>
+
+### AGENTS.md   <omit if absent>
+- <sync note added | existing note refreshed to <date>>. No other line changed.
+
 ### Gaps / open questions
 <anything you could not derive from the repo — unpinned envs, unclear canonical run, missing data dictionary>
 
 ### Next steps
-1. Review `CLAUDE.md`; correct any schema column you had to infer.
-2. Run `create-readme` for the top-level index + each subproject.
-3. Confirm the canonical run/params table.
+1. Resolve the conflicts listed above; delete each `<!-- CONFLICT: … -->` marker as you go.
+2. File or delete anything left in `## Unsorted`.
+3. Review `CLAUDE.md`; correct any schema column you had to infer.
+4. Run `readme` for the top-level index + each subproject.
+5. Confirm the canonical run/params table.
 ```
+
+Report what you did, not what the repo should look like. **No directories were created, nothing was
+moved, and the repo was not audited against the folder-structure standard** — if the layout does not
+match, that shows up as a note inside `## Folder structure`, not as an action here.
 
 ---
 
@@ -335,3 +508,12 @@ variants that must never feed a pipeline).>
 - **Keep it scannable.** Link to stage READMEs and memory notes for depth; don't duplicate them.
 - **Flag reproducibility gaps** (unpinned envs, uncontainerized steps) explicitly — that is useful
   signal, not a failure of the skill.
+- **On a re-run, restructuring is the job; rewriting is not.** The value is a file whose *shape* is
+  predictable, not whose *prose* is yours. If you find yourself improving a sentence that was
+  already accurate, stop — that is churn, and it buries the real diff.
+- **When in doubt about a block's class, treat it as reproducibility-critical.** The cost of
+  relocating something verbatim that didn't need it is a few lines. The cost of rewriting a pin's
+  justification, and losing the reason behind it, is a silent regression months later.
+- **Deviations from the folder standard are documented, not fixed.** Write what the repo actually
+  looks like and why it diverges. Moving a stage can break relative-path resolution — that is the
+  author's call to make, with the pipeline in front of them.
