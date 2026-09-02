@@ -111,6 +111,8 @@ Keep it scannable — bullets, not prose. Link to memory files / stage READMEs f
 ### Key conventions
 - The load-bearing data schemas (interchange-file column contracts), units/sign rules, config-over-CLI,
   and any standout gotchas.
+- The variant namespaces in use (`results/<variant>/<run-tag>/`) and which stages share one
+  implementation — see CLAUDE.md § Folder structure → *Variants and reuse*.
 
 ### Current focus (if git checked)
 - Active branch; uncommitted changes, if present.

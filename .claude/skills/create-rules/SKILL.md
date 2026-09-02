@@ -183,6 +183,9 @@ ls -1 CLAUDE.md AGENTS.md README.md REPORT.md NOTICE.md 2>/dev/null
 # relative-path escapes — these make a stage's depth load-bearing
 grep -rn '\.\./\.\./\.\.' --include='*.nf' --include='*.config' --include='*.py' \
   --include='*.sh' . 2>/dev/null | head
+# parameterization: variant namespaces in use, and literals that should be parameters
+ls -d scripts/*/*/params/ scripts/*/*/results/*/ 2>/dev/null | head -30
+grep -rn -E 'gs://|s3://|az://|/scratch/|/projects/' scripts/*/*/bin/ 2>/dev/null | head
 ```
 
 ### If the repo has an Analysis Design Document
@@ -246,6 +249,10 @@ Read code and headers; do **not** infer schemas from filenames.
 - **Units & sign** — log vs linear, `-log10(p)` vs `p`, OR vs beta, build GRCh37 vs 38, and any
   **sign-preservation** requirement (`b_SMR`, `rg`, `beta` signs that must survive aggregation).
 - **Parameterization** — config/params files vs CLI flags; where the *canonical* run params live.
+  Then check what `bin/` hard-wires that a re-run would change: dataset paths, cohort names,
+  thresholds, output roots. Record which knobs already vary between runs, which variant params files
+  exist, and whether any stage's implementation is a copy of a sibling's. A literal `gs://…` or a
+  magic threshold inside `bin/` is the finding.
 - **Naming** — dataset tags, run tags, `_with_features`/`_test` suffixes and what they mean. Watch
   for an **arm suffix** (`_PPP`, `_RAWZ`, `_CM`) applied to directories, scripts, configs, params,
   tests *and* output artifacts — where that convention holds it is near-total, and a file without
@@ -342,12 +349,12 @@ under `scripts/<arm>/`. Create this layout before writing any code in a new subp
         ├── ANALYSIS_DESIGN.md     arm-scoped ADD, where the arm has its own
         └── <stage>_<ARM>/
             ├── README.md          required
-            ├── bin/               required — scripts the pipeline calls
+            ├── bin/               required — shared implementation, variant-agnostic
             ├── configs/           required — grid/config YAML, keep-lists
-            ├── params/            required — one file per run stage
+            ├── params/            required — one file per variant (`main`, `sens_<name>`)
             ├── tests/             required
             ├── docs/              required
-            ├── results/           required — run outputs, `results/<run-tag>/`
+            ├── results/           required — `results/<variant>/<run-tag>/`
             ├── REPORT.md          when the stage closes
             └── figures/ data/ logs/ …    optional, created on demand
 ```
@@ -358,11 +365,53 @@ under `scripts/<arm>/`. Create this layout before writing any code in a new subp
   path — e.g. `${projectDir}/../../../<ENGINE_FORK>/<pkg>/<module>.py` — breaks silently if the
   stage moves up or down a level. Treat the depth of `scripts/<arm>/<stage>/` as fixed.
 - **Required dirs are created up front, even empty.** Optional ones are created when first needed.
-- **Run outputs go in the stage's `results/`**, one subdirectory per run tag
-  (`results/<run-tag>/`). There is no `output/` directory — a stage that grows one has drifted.
+- **Run outputs go in the stage's `results/`**, namespaced by variant then run tag
+  (`results/<variant>/<run-tag>/`). There is no `output/` directory — a stage that grows one has
+  drifted.
 - **Agent working files live under `.claude/`**: `handover/` for dated session state, `plans/` for
   implementation plans. Nothing agent-generated belongs at the repo root.
 - <Note any deviation this repo actually has, and why — do not pretend the standard is met.>
+
+### Variants and reuse
+
+A stage is written **once** and re-run under different parameters. `bin/` is variant-agnostic:
+datasets, cohorts, thresholds, transforms, reference panels and output roots arrive from `params/`,
+never as literals in the code.
+
+**A variant is a params file plus a results namespace — not a copy of the stage.**
+
+```
+<stage>_<ARM>/
+├── bin/                             one implementation, shared by every variant
+├── params/
+│   ├── main.<ext>                   the primary analysis
+│   └── sens_<name>.<ext>            one per variant; carries only the keys that differ
+└── results/
+    ├── main/<run-tag>/              primary artifacts
+    └── sens_<name>/<run-tag>/       variant artifacts, never interleaved with main
+```
+
+- **The variant tag lives in the params file** (`variant: sens_<name>`) and the stage derives its
+  output root from it. A variant that hard-codes its own `outdir` eventually collides with `main`.
+- **Use the variant level even when there is one variant.** `results/main/<run-tag>/` from the start
+  means adding a sensitivity analysis later moves no existing artifact.
+- **A variant params file names its parent and states only its delta** (`derived_from: main.<ext>`).
+  One that restates every key drifts silently from `main` when `main` changes.
+- **Isolation is strict.** No variant writes into another's namespace; nothing reads across
+  namespaces except a comparison step that names both explicitly.
+- **When behaviour must change, parameterize — do not fork.** Add the knob with `main`'s current
+  behaviour as its default, so `main`'s result is unchanged. Copying `bin/` into a `_sens` stage is
+  the failure this convention exists to prevent: the copies diverge, and the sensitivity analysis
+  stops testing the same method.
+- **Fork only when the method itself changes.** Then it is a new stage with its own `bin/`, and its
+  README says why it is not a variant.
+- **Reuse across arms:** a different dataset is a different params file. When it also needs its own
+  stage index and control plane, the new arm's stage carries `params/`, `configs/`, `results/` and a
+  README naming the stage that **owns** the implementation — it does not copy `bin/`. Only when a
+  third arm needs the same code does it earn promotion to a root-level library, and that move is
+  deliberate, because stage depth is load-bearing.
+- <Name this repo's actual variant tags, and any stage that deviates — do not pretend the standard
+  is met.>
 
 ### This repo's tree
 
@@ -401,6 +450,10 @@ variants that must never feed a pipeline).>
 ### Data schemas
 - **<file>:** `(col, col, …)` — <what each non-obvious column IS and what claim it licenses>
 - <units / sign / build conventions; sign-preservation requirements>
+
+### Parameterization & variants
+- <what `bin/` takes as parameters vs what is fixed; the variant tags in use and what each varies;
+  which stages share an implementation — see § Folder structure → *Variants and reuse*>
 
 ### Code style
 - <config-over-CLI threshold; read real headers before parsing; long vs wide format rules; language idioms>
@@ -503,6 +556,10 @@ If a note from a previous run is already there, refresh its date rather than add
 ### Load-bearing schemas captured
 <the interchange-file column contracts written into CLAUDE.md>
 
+### Parameterization & variants
+<What `bin/` parameterizes vs hard-wires; the variant namespaces found under `results/`; any stage
+whose implementation duplicates a sibling's. Report it — per Non-goals, do not refactor it.>
+
 ### Conflicts preserved — UNRESOLVED   <restructure only; omit if none>
 <Each one: what CLAUDE.md claims, what the repo says and where, and that the existing text was kept.>
 1. <claim> — CLAUDE.md vs `<source>:<line>`. Existing text preserved, marked inline.
@@ -550,5 +607,8 @@ match the standard shows up as a note inside `## Folder structure` — never as 
 - **The classification asymmetry is why Phase 0 defaults to reproducibility-critical.** Relocating
   something verbatim that didn't need it costs a few lines. Rewriting a pin's justification, and
   losing the reason behind it, is a silent regression months later.
+- **A hard-wired dataset is schema-class content.** It decides what a stage can ever be re-run on,
+  so capture it as precisely as a column contract — and only capture it. Parameterizing a stage is a
+  code change, and this skill does not make code changes.
 - **Say why a deviation exists, not that it should be fixed.** Moving a stage can break relative-path
   resolution — that is the author's call to make, with the pipeline in front of them.

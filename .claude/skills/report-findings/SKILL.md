@@ -25,7 +25,7 @@ masquerade as a finding.
 ## Where it goes — three files, in this order
 
 1. **`REPORT.md` at the subproject root** — the canonical/latest run's report. This is the default.
-   For a run-specific report, write `results/<run-tag>/REPORT.md` and have the subproject `REPORT.md`
+   For a run-specific report, write `results/<variant>/<run-tag>/REPORT.md` and have the subproject `REPORT.md`
    link to the per-run ones.
 2. **The subproject README's `## Results` section** — a 2–4 line headline + a link to `REPORT.md`.
    The README stays the scannable index; the report carries the detail. (Use the `readme` skill's
@@ -50,6 +50,9 @@ Do not summarize from memory. Read the actual outputs.
 - Recover **provenance**: which params/config produced this run, input dataset + version, container
   image/tag or env, the commit (`git rev-parse --short HEAD`), and the date (`git log -1` or run logs).
 - Note any **positive/negative controls** the stage defined and whether they passed.
+- If this is a **variant** run (`sens_<name>`), state which parameter it varies and confirm it ran
+  the same `bin/` as `main` — a sensitivity result computed by a forked script is not a sensitivity
+  result. Report which of the two it is; do not assume.
 
 If a number isn't in an artifact you can read, don't put it in the report.
 
@@ -60,7 +63,7 @@ If a number isn't in an artifact you can read, don't put it in the report.
 ````markdown
 # <subproject> — Results report
 
-**Run / dataset:** <run-tag> on <dataset + version>
+**Run / dataset:** <run-tag> on <dataset + version>  ·  **Variant:** <main | sens_<name>, varying <knob>>
 **Status:** <final | interim>  ·  **Date:** <YYYY-MM-DD>  ·  **Commit:** <short-sha>
 **Headline:** <one sentence: the single most important outcome.>
 
@@ -71,8 +74,8 @@ it came from — not what it means yet.>
 
 | Metric / output | Value | Source artifact |
 |---|---|---|
-| <e.g. clusters recovered> | <e.g. 15> | `results/<run-tag>/…` |
-| <e.g. positive control PP.H4 (HMGCR↔LDL)> | <e.g. 0.97 — PASS> | `results/<run-tag>/…` |
+| <e.g. clusters recovered> | <e.g. 15> | `results/<variant>/<run-tag>/…` |
+| <e.g. positive control PP.H4 (HMGCR↔LDL)> | <e.g. 0.97 — PASS> | `results/<variant>/<run-tag>/…` |
 
 <Controls: state explicitly which passed/failed.>
 
@@ -168,6 +171,9 @@ number. Lifted from the subproject report's Findings — never from its interpre
   cited as a result — so it does not travel.
 - **Keep each block to 2–4 lines.** The root file is an index with headlines, not a compilation. If
   a reader needs more, the link is right there.
+- **Variants attach to the primary; they do not get a block.** A sensitivity run adds one line to
+  its stage's existing `###` block ("`sens_<name>`: headline held / did not hold, <number>"). The
+  root file indexes stages, not runs.
 - **Order blocks to match the root README's workflow order**, not by date — a reader arriving from
   the README should find the same sequence.
 
@@ -181,7 +187,7 @@ number. Lifted from the subproject report's Findings — never from its interpre
    - Anything causal/speculative goes under **Exploratory interpretation** with hedged wording and a
      "to confirm" note — never under Findings.
    - Every Results-table number must trace to a named artifact.
-4. **Write** `REPORT.md` (subproject root by default; `results/<run-tag>/REPORT.md` for run-specific).
+4. **Write** `REPORT.md` (subproject root by default; `results/<variant>/<run-tag>/REPORT.md` for run-specific).
 5. **Update the subproject README:** insert/refresh the `## Results` headline + link. If the README
    lacks a `## Results` section, add it (per `readme` Template B) directly before `## Related`.
 6. **Roll up to the root `REPORT.md`:** create it from the template if absent (with the synthesis
@@ -206,7 +212,7 @@ number. Lifted from the subproject report's Findings — never from its interpre
 - **Numbers without a source** — every value cites the artifact it came from.
 - **Over-long reports** — this is a 1–2 minute read, not a manuscript. Push depth into the artifacts.
 - **Silent overwrite** — if `REPORT.md` exists for a different run, don't clobber it; write the new
-  run's report under `results/<run-tag>/` and link both from the root.
+  run's report under `results/<variant>/<run-tag>/` and link both from the root.
 - **Confident hedging** — interpretation bullets must actually read as tentative; pair each with what
   would test it.
 - **Writing the root synthesis** — the tempting one. You have just read a report in detail and the

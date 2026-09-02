@@ -176,11 +176,17 @@ those decisions as they freeze. Write the ADD first, then keep the YAML current.
 > § *Folder structure*. That tree is the one `create-rules` writes into every generated `CLAUDE.md`;
 > the summary here is orientation, not a second specification.
 
-Three rules carry the weight:
+Four rules carry the weight:
 
 - **The root holds housekeeping only.** Every analysis — including the first one — is a subproject at
   `scripts/<arm>/<stage>_<ARM>/`, with a required `bin/ configs/ params/ tests/ docs/ results/` and a
-  README. Run outputs go in `results/<run-tag>/`; a stage that grows an `output/` has drifted.
+  README. Run outputs go in `results/<variant>/<run-tag>/`; a stage that grows an `output/` has drifted.
+- **One implementation, many variants.** `bin/` is parameterized — datasets, cohorts and thresholds
+  arrive from `params/`, never as literals — so a sensitivity analysis is a new params file plus its
+  own results namespace, not a copied stage. Forking `bin/` is exactly what stops a sensitivity
+  analysis from testing the same method. When a shared script can't express the variant, add a
+  parameter whose default leaves `main` unchanged. `plan-analysis` runs a reuse check before naming
+  any new file, and `execute` refuses the copy.
 - **The two root exceptions are libraries, not subprojects.** A vendored engine fork and `docker/`
   stay at root. Anything that *is* an analysis moves under `scripts/<arm>/`.
 - **Stage depth is load-bearing.** A stage reaching a root-level library via

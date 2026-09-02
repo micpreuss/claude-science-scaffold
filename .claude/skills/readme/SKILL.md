@@ -179,11 +179,19 @@ number them in execution order.>
 ## How to run
 
 ```bash
-# Canonical, copy-pasteable invocation
+# Canonical, copy-pasteable invocation (primary variant)
 <command>
 ```
 
 <State the submission context: head/login node vs local; profile name.>
+
+| Variant | Params | Results namespace | Varies |
+|---|---|---|---|
+| `main` | `params/main.<ext>` | `results/main/<run-tag>/` | — primary |
+| `sens_<name>` | `params/sens_<name>.<ext>` | `results/sens_<name>/<run-tag>/` | <the one knob> |
+
+<One row per variant; `main` alone if there are none yet. All variants run the same `bin/` — if this
+stage reuses another stage's implementation, name that stage here instead of describing the code.>
 
 ## Key decisions / gotchas
 
@@ -260,4 +268,6 @@ into the index sequentially (the `readme` skill itself does this per invocation)
 - Linking to `Upstream:`/`Downstream:` paths you didn't verify.
 - Writing `Status: complete` with no evidence from prose or git log.
 - Adding emojis or marketing tone. Match the terse, present-tense house voice.
+- Documenting a variant (a params file + a results namespace) as though it were a separate stage —
+  it belongs in the variants table, not in the index's workflow order.
 - Bypassing the template "because this stage is different" — keep the headers; mark empties explicitly.

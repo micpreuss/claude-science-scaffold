@@ -40,7 +40,15 @@ For EACH task in "Step by Step Tasks":
 - Follow the detailed specifications exactly
 - Maintain consistency with existing code patterns and the project's conventions (schemas, units, sign preservation)
 - Document non-obvious choices; log where the project logs
-- Prefer config/params over hard-coded flags where the project does
+- **Never hard-wire what a re-run would change** — dataset paths, cohort names, thresholds,
+  transforms, seeds and output roots belong in `params/`, not in `bin/`. This is the whole of what
+  makes the stage re-runnable for a sensitivity analysis or a new dataset later.
+- **Write to the variant's namespace** — `results/<variant>/<run-tag>/`, with the variant tag read
+  from the params file, never a path literal.
+- **If the plan has you copying an existing script, stop.** Add a parameter to the shared one whose
+  default reproduces the current behaviour, so `main` still runs to the same result. A forked
+  implementation is how a sensitivity analysis quietly stops testing the same method. If the method
+  genuinely differs, that is a new stage — say so before writing it.
 
 #### c. Verify as you go
 - After each change, check syntax (and that the orchestrator graph still parses, e.g. `nextflow ... -preview` / `snakemake -n`)
@@ -76,6 +84,9 @@ Before completing:
 - ✅ Tests / smoke runs created and passing
 - ✅ All validation commands pass
 - ✅ Code follows project conventions and schema contracts
+- ✅ Nothing that varies between runs is a literal in `bin/`; each run wrote only to its own
+  `results/<variant>/` namespace
+- ✅ If a shared script gained a parameter, `main` still runs and produces the same result
 - ✅ Documentation (stage README / CLAUDE.md) updated as needed
 
 ## Output Report

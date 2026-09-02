@@ -53,7 +53,11 @@ anything runs. For a routine stage at smoke scale, skip it — the skill's own d
 
 - State the **scientific question** and the inference the output licenses.
 - Name the **object**: what data it operates on, and what representation (matrix? long table? VCF?).
-- Classify: New stage / Extension of a stage / Re-analysis / Method swap / Bug fix.
+- Classify: New stage / **Variant of an existing stage** (sensitivity, alternative threshold or
+  transform, new dataset through the same method) / Extension of a stage / Re-analysis / Method swap
+  / Bug fix.
+- If it is a variant, the deliverable is a **params file and a results namespace**, not a new stage
+  folder — see the reuse check in Phase 2. Reaching for a new folder is the default worth resisting.
 - Assess complexity: Low / Medium / High, and the main risk (data, method, or compute).
 
 Write it as:
@@ -85,6 +89,18 @@ So that <inference / decision it supports>
 **4. Compute & reproducibility**
 - Backend (local / SLURM / cloud batch), profile, container/env, where it submits from.
 - Canonical params/config location and naming.
+
+**5. Reuse check (do this before naming any new file)**
+- Does a stage already implement this method? `ls scripts/*/*/bin/`, then read the closest match.
+- If one does and only *parameters* differ — dataset, cohort, threshold, transform, seed — this is a
+  **variant**: plan a `params/sens_<name>.<ext>` and a `results/sens_<name>/` namespace against the
+  existing `bin/`. Do not plan a new stage folder, and do not plan to copy `bin/`.
+- If the shared script cannot express the variant, plan to **add a parameter whose default
+  reproduces `main` unchanged**. That edit to `bin/` is part of this plan, and `main` must still run
+  to the same result afterwards.
+- Only a genuinely different method earns a new stage. When it does, say in the plan why it is not a
+  variant.
+- The convention is `CLAUDE.md` § Folder structure → *Variants and reuse*.
 
 **Clarify ambiguities now.** If the method, the input run, or the success criterion is unclear, ask
 before proceeding.
@@ -129,6 +145,14 @@ As an analyst / I want to <analysis> / So that <inference>.
 ## Pipeline position
 - **Upstream:** <stage(s) + the input run/manifest>
 - **Downstream:** <consumer stage(s)>  ·  **Orchestration pattern to mirror:** <file:lines>
+
+## Reuse & variant namespace
+- **Kind:** <new stage | variant of `<stage>`>
+- **Implementation:** <`<stage>/bin/<script>`, reused unchanged | reused with a new parameter
+  `<key>` whose default is the current behaviour | new, because the method itself differs: <why>>
+- **Params:** `params/<variant>.<ext>` — `derived_from: main.<ext>`; keys that differ: `<…>`
+- **Results namespace:** `results/<variant>/<run-tag>/`, isolated from `main`
+- **Comparison to `main`:** <the metric and the artifact that will hold both — or "n/a, this is main">
 
 ## CONTEXT REFERENCES — READ BEFORE IMPLEMENTING
 
@@ -191,6 +215,9 @@ There is usually no unit-test suite. Validate by:
 - [ ] Positive controls recovered; negative controls null
 - [ ] Smoke run passes; full run command documented
 - [ ] Stage wired into the DAG and anchored in the index README
+- [ ] Nothing that varies between runs is a literal in `bin/`; the run writes only to its own
+      `results/<variant>/` namespace
+- [ ] If a shared script gained a parameter, `main` still runs to the same result
 - [ ] Provenance captured (params, reference-data versions, container/env, commit)
 
 ## NOTES
@@ -213,6 +240,8 @@ planning.
 - **Control-anchored** — at least one positive (and ideally one negative) control with an expected result.
 - **Runnable validation** — every task has an executable check; the plan passes the "no prior
   knowledge" test (someone new to the repo could execute it).
+- **Reuse-first** — a variant reuses the owning stage's `bin/` unchanged, or adds a parameter whose
+  default leaves `main` bit-identical. A copied script is a plan defect, not a shortcut.
 - **Convention-consistent** — mirrors the repo's orchestration, storage, and naming patterns.
 
 ## Report

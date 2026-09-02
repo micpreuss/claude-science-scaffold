@@ -72,11 +72,18 @@ Adapt depth to available information. Use ✅ / ❌ checkboxes for in/out-of-sco
 ### 7. Pipeline / compute architecture
 - Stage DAG (text), orchestration engine + profile, compute backend, container/env.
 - Storage layout for intermediates and outputs.
+- **What varies vs what is fixed:** the knobs each stage takes as parameters (dataset, cohort,
+  thresholds, transforms, seeds) and the variant tags planned for them. One implementation per
+  method, re-run per variant into `results/<variant>/<run-tag>/` — never one copy of the code per
+  variant. Declaring the knobs here is what keeps a later sensitivity analysis cheap.
 
 ### 8. Validation & controls
 - **Positive/negative controls** with expected results (e.g. HMGCR↔LDL should colocalize; a null where
   none is expected).
-- Smoke tests, sensitivity analyses, and schema/sanity checks.
+- Smoke tests and schema/sanity checks.
+- **Sensitivity analyses**, each named with the parameter it varies. Each runs through the *same*
+  implementation under its own variant namespace, so the comparison against the primary is
+  like-for-like rather than a comparison of two scripts.
 
 ### 9. Outputs & deliverables
 - Tables, figures, latent GWAS/sumstats, exports (FUMA/SMR/COJO), and the final `REPORT.md`
@@ -121,6 +128,7 @@ Adapt depth to available information. Use ✅ / ❌ checkboxes for in/out-of-sco
 - ✅ Each method names its assumptions + how they're checked
 - ✅ At least one positive control with an expected result
 - ✅ Data schemas explicit; reference data versioned
+- ✅ Every planned sensitivity analysis names the parameter it varies and reuses the primary implementation
 - ✅ Consistent terminology
 
 ## Style guidelines
